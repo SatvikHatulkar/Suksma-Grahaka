@@ -1,8 +1,11 @@
-# Suksma-Grahaka
-
 # Suksma-Grahaka v0.5
 
 Suksma-Grahaka is a lightweight Windows surveillance utility written in C++. It is designed to capture and exfiltrate data such as screenshots of browser activity and user keystrokes. This tool is intended strictly for **educational and research purposes** in malware analysis and red teaming environments.
+
+---
+
+## Disclaimer
+This project is intended strictly for ethical hacking research, malware behavior analysis, and red team simulation. Misuse of this tool in violation of any laws or against unwitting targets is strictly discouraged.
 
 ---
 
@@ -42,8 +45,7 @@ Suksma-Grahaka/
 └── ...
 ```
 
-## Disclaimer
-This project is intended strictly for ethical hacking research, malware behavior analysis, and red team simulation. Misuse of this tool in violation of any laws or against unwitting targets is strictly discouraged.
+---
 
 ## Future Enhancements
 - Add HTTP/WebSocket exfiltration module
@@ -51,7 +53,11 @@ This project is intended strictly for ethical hacking research, malware behavior
 - Implement stealth and evasion techniques
 - Add persistence via Windows service/registry
 
+---
+
 ## Follow Me
 - [GitHub](https://github.com/SatvikHatulkar)
 - [Medium](https://medium.com/@satvikhatulkar)
 - [LinkedIn](https://www.linkedin.com/in/satvik-hatulkar-a91042252)
+
+---
