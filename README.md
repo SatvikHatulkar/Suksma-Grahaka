@@ -20,7 +20,7 @@ This project is intended strictly for ethical hacking research, malware behavior
   - Stores the data in a persistent file for analysis.
 
 - **Data Exfiltration Module**
-  - (Optional) Transfers captured logs and screenshots from the victim’s machine to an attacker-controlled host (via custom network or file-transfer logic).
+  - (TODO) Transfers captured logs and screenshots from the victim’s machine to an attacker-controlled host (via custom network or file-transfer logic).
 
 ---
 
